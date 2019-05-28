@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# coding: utf8
 
 #    Copyright 2015-2016 Richard Huang <rickypc@users.noreply.github.com>
 #
@@ -18,12 +19,13 @@
 """
 IMAP Library - a IMAP email testing library.
 """
-
 from email import message_from_string
 from imaplib import IMAP4, IMAP4_SSL
 from re import findall
 from codecs import decode
 from time import sleep, time
+import sys, pdb,quopri;
+
 try:
     from urllib.request import urlopen
 except ImportError:
@@ -95,12 +97,13 @@ class ImapLibrary(object):
         """
         self._imap.close()
 
-    def delete_all_emails(self):
+    def delete_all_emails(self,**kwargs):
         """Delete all emails.
 
         Examples:
         | Delete All Emails |
         """
+        self._mails = self._check_emails(**kwargs)
         for mail in self._mails:
             self.delete_email(mail)
         self._imap.expunge()
@@ -375,24 +378,36 @@ class ImapLibrary(object):
 
     def _check_emails(self, **kwargs):
         """Returns filtered email."""
+        """pdb.Pdb(stdout=sys.__stdout__).set_trace()"""
         folder = '"%s"' % str(kwargs.pop('folder', self.FOLDER))
+
         criteria = self._criteria(**kwargs)
+        #pdb.Pdb(stdout=sys.__stdout__).set_trace()
         # Calling select before each search is necessary with gmail
         status, data = self._imap.select(folder)
         if status != 'OK':
             raise Exception("imap.select error: %s, %s" % (status, data))
         typ, msgnums = self._imap.uid('search', None, *criteria)
+
         if typ != 'OK':
             raise Exception('imap.search error: %s, %s, criteria=%s' % (typ, msgnums, criteria))
         return msgnums[0].split()
+
 
     @staticmethod
     def _criteria(**kwargs):
         """Returns email criteria."""
         criteria = []
+
         recipient = kwargs.pop('recipient', kwargs.pop('to_email', kwargs.pop('toEmail', None)))
         sender = kwargs.pop('sender', kwargs.pop('from_email', kwargs.pop('fromEmail', None)))
         status = kwargs.pop('status', None)
+        #subject = decode(kwargs.pop('subject', None), 'quopri_codec').decode('Windows-1252')
+		# str(a.encode('utf8'))
+        # pdb.Pdb(stdout=sys.__stdout__).set_trace()
+        #subject= quopri.decodestring(kwargs.pop('subject', None).decode('Windows-1252'))
+        # subject= decode(kwargs.pop('subject', None), 'quopri_codec').decode('utf8')
+        # subject = ""
         subject = kwargs.pop('subject', None)
         text = kwargs.pop('text', None)
         if recipient:
