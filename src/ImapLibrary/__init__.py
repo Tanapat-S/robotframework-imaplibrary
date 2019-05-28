@@ -22,6 +22,7 @@ IMAP Library - a IMAP email testing library.
 from email import message_from_string
 from imaplib import IMAP4, IMAP4_SSL
 from re import findall
+from codecs import decode
 from time import sleep, time
 try:
     from urllib.request import urlopen
@@ -129,10 +130,8 @@ class ImapLibrary(object):
         if self._is_walking_multipart(email_index):
             body = self.get_multipart_payload(decode=True)
         else:
-            body = self._imap.uid('fetch',
-                                  email_index,
-                                  '(BODY[TEXT])')[1][0][1].\
-                decode('quoted-printable')
+            encoded_body = self._imap.uid('fetch', email_index, '(BODY[TEXT])')[1][0][1]
+            body = decode(encoded_body, 'quopri_codec').decode('Windows-1252')
         return body
 
     def get_links_from_email(self, email_index):
@@ -188,7 +187,9 @@ class ImapLibrary(object):
         Examples:
         | Get Multipart Field Names |
         """
-        return list(self._mp_msg.keys())
+        """ return list(self._mp_msg.keys())"""
+        my_list = [1, 2, 3]
+        return list(self._part.keys())
 
     def get_multipart_payload(self, decode=False):
         """Returns the payload of current part of selected multipart email message.
@@ -199,11 +200,31 @@ class ImapLibrary(object):
         Examples:
         | Get Multipart Payload |
         | Get Multipart Payload | decode=True |
-        """
+
         payload = self._part.get_payload(decode=decode)
         charset = self._part.get_content_charset()
         if charset is not None:
             return payload.decode(charset)
+        return payload
+        """
+        content_transfer_encoding = self._part.part["Content-Transfer-Encoding"]
+        content_type = self._part.part["Content-Type"]
+        payload = self._part.part.get_payload()
+
+        if content_transfer_encoding == "base64":
+            payload = base64.b64decode(payload)
+        elif content_transfer_encoding == "quoted-printable":
+            payload = quopri.decodestring(payload)
+
+        # payload is already properly decoded, usually happens in plain text emails
+        if isinstance(payload, str):
+            return payload
+
+        # payload is text, decode with proper charset
+        if is_text(content_type):
+            return payload.decode(get_charset(content_type))
+
+        # payload is probably binary, don't do anything else
         return payload
 
     def mark_all_emails_as_read(self):
@@ -341,7 +362,7 @@ class ImapLibrary(object):
         | Walk Multipart Email | INDEX |
         """
         if not self._is_walking_multipart(email_index):
-            data = self._imap.uid('fetch', email_index, '(RFC822)')[1][0][1]
+            data = self._imap.uid('fetch', email_index, '(RFC822)')[1][0][1].decode()
             msg = message_from_string(data)
             self._start_multipart_walk(email_index, msg)
         try:
