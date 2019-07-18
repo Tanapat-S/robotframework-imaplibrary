@@ -134,7 +134,7 @@ class ImapLibrary(object):
             body = self.get_multipart_payload(decode=True)
         else:
             encoded_body = self._imap.uid('fetch', email_index, '(BODY[TEXT])')[1][0][1]
-            body = decode(encoded_body, 'quopri_codec').decode('Windows-1252')
+            body = decode(encoded_body, 'quopri_codec').decode()
         return body
 
     def get_links_from_email(self, email_index):
