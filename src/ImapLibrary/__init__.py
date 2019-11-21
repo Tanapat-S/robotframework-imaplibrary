@@ -411,7 +411,7 @@ class ImapLibrary(object):
         #subject= quopri.decodestring(kwargs.pop('subject', None).decode('Windows-1252'))
         # subject= decode(kwargs.pop('subject', None), 'quopri_codec').decode('utf8')
         # subject = ""
-        subject = kwargs.pop('subject', None)
+        subject = kwargs.pop('subject', None).encode('ascii', 'replace').decode()
         text = kwargs.pop('text', None)
         if recipient:
             criteria += ['TO', '"%s"' % recipient]
